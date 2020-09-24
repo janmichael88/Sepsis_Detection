@@ -10,4 +10,5 @@ The date comes from the MIMIC IV repository
 For this project approximately 10 million rows were obtained from MIMIC IV. This was narrowed down to 2 million total entries. With approximately 40,000 patients. Root files in this directoy include data aggregation and EDA
 
 ### Folder Files
-* v1 lstm with 3 units for a time i window of 100 - model just predicts the moajority class
+* v1 lstm with 3 units for a time i window of 100 - model just predicts the moajority class\
+* v2 same lstm, but with the correct labels, still the same as v1
