@@ -13,3 +13,4 @@ For this project approximately 10 million rows were obtained from MIMIC IV. This
 * v1 lstm with 3 units for a time i window of 100 - model just predicts the moajority class\
 * v2 same lstm, but with the correct labels, still the same as v1
 * v3 experimenting with xgboost to identify feature importance values 25Sep20
+* v4 experimenting with Cox Models and Surivial Analysis 28Sep20
