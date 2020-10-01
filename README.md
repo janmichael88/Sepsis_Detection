@@ -14,3 +14,4 @@ For this project approximately 10 million rows were obtained from MIMIC IV. This
 * v2 same lstm, but with the correct labels, still the same as v1
 * v3 experimenting with xgboost to identify feature importance values 25Sep20
 * v4 experimenting with Cox Models and Surivial Analysis 28Sep20
+* v5 experimenting with LSTM-Attention base models 01Sep20
