@@ -9,46 +9,18 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-#https://github.com/ShivamBhirud/Capital-Bike-Share-Data-Streamlit-Web-Application/blob/master/demoStreamlit.py
-#https://docs.streamlit.io/en/stable/tutorial/create_a_data_explorer_app.html
-#https://docs.streamlit.io/en/stable/api.html#display-charts
-#https://discuss.streamlit.io/t/drop-down-menu/3180
 
-
-
-test = 'demo_test_csv.csv'
 
 #CACHE FUNCTIONS
-
 @st.cache
-def load_data_and_process():
-	data = pd.read_csv(test, index_col=0)
-	return(data)
-
-data_load_state = st.text('Loading data...')
-data = load_data_and_process()
-data_load_state.text("Done! (using st.cache)")
-
+def dummy(nrows):
+	print('')
 
 
 #UN CAHCED
-
-def pre_process(frame,length=100,method='linear'):
-	#subset frame
-    frame = frame.iloc[:,list(range(2,37))+[-1]]
-    #get size
-    rows,cols = frame.shape[0],frame.shape[1]
-    #broadcast last_row
-    last_row = frame.iloc[-1,:]
-    for i in range(length-rows):
-        frame = frame.append(last_row,ignore_index=True)
-        #first interpolat linearly
-    frame = frame.interpolate(method=method)
-    #then backfill,forwardfill, then 0
-    frame = frame.fillna(method='bfill').fillna(method='ffill').fillna(0)
+def pre_process(frame,method='linear'):
+    frame = frame.interpolate(method=method).fillna(0)
     #assert nans
-    assert np.sum(pd.isnull(frame.values)) == 0, 'There are still NaNs!'
-    assert frame.shape[0] == length,'Not the right size!'
     return(frame)
 
 def plot_sepsis_covariates(col_name,data,col1,col2):
@@ -95,15 +67,15 @@ def plotly_two(col_name,data):
 
 	# Add figure title
 	fig.update_layout(
-	    title_text="Double Y Axis Example"
+	    title_text="Sepsis Onset vs "+col_name
 	)
 
 	# Set x-axis title
-	fig.update_xaxes(title_text="xaxis title")
+	fig.update_xaxes(title_text="Hours in ICU")
 
 	# Set y-axes titles
-	fig.update_yaxes(title_text="<b>primary</b> yaxis title", secondary_y=False)
-	fig.update_yaxes(title_text="<b>secondary</b> yaxis title", secondary_y=True)
+	fig.update_yaxes(title_text="<b>"+col_name+"</b>", secondary_y=False)
+	fig.update_yaxes(title_text="<b>Sepsis Onset</b>", secondary_y=True)
 	st.plotly_chart(fig)
 
 def plotly_plot_predictions(output):
@@ -116,26 +88,63 @@ def plotly_plot_predictions(output):
 
 #main call
 def main():
-	st.title('ICU patient Septic Shock Detection and Data Explorer')
+	st.title('ICU Patient Septic Shock Detection and Data Explorer')
 
-	#checkbox to show raw data
-	if st.checkbox('Show Raw Data'):
-		st.subheader("Showing raw data---->>>")	
+	#loading image
+	st.image('demo_pic1.png',use_column_width=True)
+
+	#Despcription
+	st.markdown('''
+		### Description
+		* Sepsis is 11th leading cause of death for ICU patients. Aprroximately 1.7 million people develop sepsis and 270,00 die annually.
+		* If patients do develop sepsis, it usually happens in the within 7 to 10 hours after admission.
+		* This application assigns the probability a patient will expereience sepsis within the next 12 hours given a 36 hour observation window.
+		* Current algorithm is Transformer LSTM with Attention (paper can be found here: [Attention is All you Need](https://papers.nips.cc/paper/7181-attention-is-all-you-need.pdf))
+		* The LSTM was trained on over 350,000 patient histories from the [MIMIC IV respository] (https://mimic-iv.mit.edu/)
+		* INPUT: 36 hourly obervation window with 41 different indicators (i.e (36,41) tensor). 
+		Indicators include Heart rate(beats per minut), Body Temperature (Deg C), Systolic BP (mm HG), etc. 
+		* OUTPUT: Probability of Sepsis at each Hour (36,1 tensor)
+		'''
+		)
+	#Show Columns
+	st.markdown('### Column Descriptions')
+	frame = pd.read_csv('Sepsis_Column_Descriptions.csv',index_col=0)
+	st.write(frame)
+
+
+	#First Section
+	st.header("LOAD IN PATIENT SENSOR DATA")
+	st.markdown('''
+		* Ensure Data Input format is correct! If attaching your own csv file, ensure file is in same.
+		* Demo application data available here on my [Github Repo](https://raw.githubusercontent.com/janmichael88/Sepsis_Detection/master/DemoTestSepsis.csv)
+		''')
+	try:
+		user_input = st.text_input("Path to csv file")
+		data = pd.read_csv(user_input,index_col=0,encoding='utf-8')
 		st.write(data)
+	except FileNotFoundError:
+		pass
 
-	#second checkbox	
-	if st.checkbox('Process Data? This will remove Nans,forwardfill and interpolate accordingly'):
-		st.subheader('Preprocessing....')
+	#Preoprcess Section
+	st.header("PREPROCESS SENSOR DATA")
+	if st.checkbox('Process Data? This will remove Nans and interpolate linearly.'):
 		st.write(pre_process(data))
 
-	#checkbox to examine time series
+	#Data Explorere Section
+	st.header('PATIENT SENSOR DATA EXPLORER')
+	st.markdown('''
+		* Red line indicates when patient went into sepsis (0,1).
+		* Blue line can be toggled to select whatever covariate desired.
+		* X axis is hours since patient has been in the ICU.
+		''')
 	if st.checkbox('Examine Time Series and Sepsis Onset Together?'):
-		option = st.selectbox('What covariates to you wish to compare?',
+		option = st.selectbox('What covariates do you wish to compare?',
 			tuple(data.columns))
 		plotly_two(option,data)
 
 	#checkbox to create predictino vector
-	if st.checkbox('Predict Probability of Septic Shock for this patient'):
+	st.header("DETERMINE RISK OF SEPSIS FOR THIS PATIENT?")
+	if st.checkbox('Obtain Sepsis Probability trajectory in the next 12 hours?'):
 		x,y = pull_xy(pre_process(data))
 		#predict
 		model = instantiate_model()
